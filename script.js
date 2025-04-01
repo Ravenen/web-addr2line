@@ -102,6 +102,7 @@ class Addr2LineConverter {
         const elfFilesList = document.getElementById('elfFilesList');
         elfFilesList.innerHTML = this.elfFiles.map((file, index) => `
             <li class="elf-file-item" data-index="${index}">
+                <i class="fas fa-grip-vertical drag-handle"></i>
                 <span class="elf-file-name" contenteditable="true" 
                     onblur="converter.updateFileName(${index}, this.textContent)">
                     ${file.name}
@@ -109,8 +110,12 @@ class Addr2LineConverter {
                 <div class="elf-file-tags">
                     ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
                 </div>
-                <button onclick="converter.addTag(${index})">Add Tag</button>
-                <button onclick="converter.removeFile(${index})">Remove</button>
+                <button onclick="converter.addTag(${index})">
+                    <i class="fas fa-tag"></i> Add Tag
+                </button>
+                <button onclick="converter.removeFile(${index})">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
             </li>
         `).join('');
     }

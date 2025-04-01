@@ -30,11 +30,29 @@
 
             <main>
                 <div class="input-panel">
-                    <h2>Input Text</h2>
+                    <div class="panel-header">
+                        <h2>Input Text</h2>
+                        <div class="panel-actions">
+                            <label for="textFile" class="action-btn">
+                                <i class="fas fa-file-upload"></i>
+                            </label>
+                            <input type="file" id="textFile" hidden>
+                            <button class="action-btn" onclick="converter.clearInput()">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
                     <textarea id="inputText" placeholder="Enter text with pointers or drop a file here"></textarea>
                 </div>
                 <div class="output-panel">
-                    <h2>Converted Output</h2>
+                    <div class="panel-header">
+                        <h2>Converted Output</h2>
+                        <div class="panel-actions">
+                            <button class="action-btn" onclick="converter.copyOutput()">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
                     <div id="outputText" class="output-area"></div>
                 </div>
             </main>

@@ -11,6 +11,7 @@ class Addr2LineConverter {
         this.elfFiles = this.loadElfFiles();
         this.setupEventListeners();
         this.apiUrl = 'http://localhost:8000'; // Change in production
+        this.activeFileIndex = this.elfFiles.length > 0 ? 0 : null;
     }
 
     loadElfFiles() {
@@ -24,23 +25,28 @@ class Addr2LineConverter {
     setupEventListeners() {
         const inputText = document.getElementById('inputText');
         const elfFileInput = document.getElementById('elfFile');
-        const elfFilesList = document.getElementById('elfFilesList');
+        const textFileInput = document.getElementById('textFile');
 
         // Text input handling
         inputText.addEventListener('input', () => this.convertText());
         inputText.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            inputText.classList.add('dragover');
         });
-        inputText.addEventListener('drop', (e) => this.handleTextFileDrop(e));
+        inputText.addEventListener('dragleave', () => {
+            inputText.classList.remove('dragover');
+        });
+        inputText.addEventListener('drop', (e) => {
+            inputText.classList.remove('dragover');
+            this.handleTextFileDrop(e);
+        });
 
-        // ELF file input handling
+        // File input handling
+        textFileInput.addEventListener('change', (e) => this.handleTextFileSelect(e));
         elfFileInput.addEventListener('change', (e) => this.handleElfFileUpload(e));
 
-        // Initialize drag-and-drop for ELF files list
         this.initializeDragAndDrop();
-        
-        // Initial render
         this.renderElfFilesList();
     }
 
@@ -56,80 +62,50 @@ class Addr2LineConverter {
         }
     }
 
+    async handleTextFileSelect(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const text = await file.text();
+            document.getElementById('inputText').value = text;
+            this.convertText();
+        }
+        e.target.value = ''; // Reset input for reuse
+    }
+
+    clearInput() {
+        document.getElementById('inputText').value = '';
+        document.getElementById('outputText').textContent = '';
+    }
+
+    async copyOutput() {
+        const output = document.getElementById('outputText').textContent;
+        try {
+            await navigator.clipboard.writeText(output);
+        } catch (err) {
+            console.error('Failed to copy text:', err);
+        }
+    }
+
     async handleElfFileUpload(e) {
         const file = e.target.files[0];
         if (file) {
-            // Try to get the full path, fallback to name if not available
             let fullPath = file.webkitRelativePath || file.path || file.name;
-            
-            // If we only have the filename, try to get the full path from the input
+
             if (fullPath === file.name) {
                 try {
                     fullPath = e.target.files[0].mozFullPath || file.name;
                 } catch (e) {
-                    // Fallback to name if full path is not available
                     fullPath = file.name;
                 }
             }
-            
+
             const elfFile = new ElfFile(file.name, URL.createObjectURL(file));
             elfFile.displayName = file.name;
             elfFile.fullPath = fullPath;
             this.elfFiles.push(elfFile);
             this.saveElfFiles();
+            this.activeFileIndex = this.elfFiles.length - 1;
             this.renderElfFilesList();
-        }
-    }
-
-    async convertText() {
-        const inputText = document.getElementById('inputText').value;
-        const outputText = document.getElementById('outputText');
-        
-        if (!inputText.trim()) {
-            outputText.textContent = '';
-            return;
-        }
-
-        if (this.elfFiles.length === 0) {
-            outputText.textContent = 'Please load an ELF file first';
-            return;
-        }
-
-        try {
-            const formData = new FormData();
-            formData.append('log_text', inputText);
-            
-            // Get the first ELF file's blob
-            const response = await fetch(this.elfFiles[0].path);
-            const blob = await response.blob();
-            formData.append('elf_file', blob);
-
-            // Send request to backend with proper CORS settings
-            const apiResponse = await fetch(`${this.apiUrl}/resolve_log`, {
-                method: 'POST',
-                body: formData,
-                mode: 'cors',
-                credentials: 'include',
-                headers: {
-                    'Accept': 'application/json',
-                }
-            });
-
-            if (!apiResponse.ok) {
-                const errorData = await apiResponse.json();
-                throw new Error(errorData.detail || 'API request failed');
-            }
-
-            const result = await apiResponse.json();
-            outputText.textContent = result.resolved_log;
-
-            // Optionally display statistics
-            // if (result.addresses_found > 0) {
-            //     outputText.textContent += `\n\n---\nStatistics:\nAddresses found: ${result.addresses_found}\nAddresses resolved: ${result.addresses_resolved}`;
-            // }
-        } catch (error) {
-            console.error('Conversion error:', error);
-            outputText.textContent = 'Error during conversion: ' + error.message;
         }
     }
 
@@ -141,8 +117,7 @@ class Addr2LineConverter {
                 const itemEl = evt.item;
                 const newIndex = evt.newIndex;
                 const oldIndex = evt.oldIndex;
-                
-                // Reorder the elfFiles array
+
                 const [movedItem] = this.elfFiles.splice(oldIndex, 1);
                 this.elfFiles.splice(newIndex, 0, movedItem);
                 this.saveElfFiles();
@@ -153,7 +128,9 @@ class Addr2LineConverter {
     renderElfFilesList() {
         const elfFilesList = document.getElementById('elfFilesList');
         elfFilesList.innerHTML = this.elfFiles.map((file, index) => `
-            <li class="elf-file-item" data-index="${index}">
+            <li class="elf-file-item ${index === this.activeFileIndex ? 'active' : ''}" 
+                data-index="${index}" 
+                onclick="converter.setActiveFile(${index})">
                 <i class="fas fa-grip-vertical drag-handle"></i>
                 <div class="file-content">
                     <span class="elf-file-name" contenteditable="true" 
@@ -185,6 +162,57 @@ class Addr2LineConverter {
         `).join('');
     }
 
+    setActiveFile(index) {
+        this.activeFileIndex = index;
+        this.renderElfFilesList();
+        this.convertText();
+    }
+
+    async convertText() {
+        const inputText = document.getElementById('inputText').value;
+        const outputText = document.getElementById('outputText');
+
+        if (!inputText.trim()) {
+            outputText.textContent = '';
+            return;
+        }
+
+        if (this.elfFiles.length === 0 || this.activeFileIndex === null) {
+            outputText.textContent = 'Please load and select an ELF file';
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('log_text', inputText);
+
+            const response = await fetch(this.elfFiles[this.activeFileIndex].path);
+            const blob = await response.blob();
+            formData.append('elf_file', blob);
+
+            const apiResponse = await fetch(`${this.apiUrl}/resolve_log`, {
+                method: 'POST',
+                body: formData,
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+
+            if (!apiResponse.ok) {
+                const errorData = await apiResponse.json();
+                throw new Error(errorData.detail || 'API request failed');
+            }
+
+            const result = await apiResponse.json();
+            outputText.textContent = result.resolved_log;
+        } catch (error) {
+            console.error('Conversion error:', error);
+            outputText.textContent = 'Error during conversion: ' + error.message;
+        }
+    }
+
     addEmptyTag(index) {
         const tagsContainer = document.querySelector(`[data-index="${index}"] .elf-file-tags`);
         const newTag = document.createElement('span');
@@ -193,13 +221,12 @@ class Addr2LineConverter {
             <input type="text" placeholder="Enter tag" autofocus>
             <i class="fas fa-times"></i>
         `;
-        
-        // Append to the end of tags container
+
         tagsContainer.appendChild(newTag);
-        
+
         const input = newTag.querySelector('input');
         input.focus();
-        
+
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 const tag = input.value.trim();
@@ -214,11 +241,11 @@ class Addr2LineConverter {
                 newTag.remove();
             }
         });
-        
+
         input.addEventListener('blur', () => {
             setTimeout(() => newTag.remove(), 200);
         });
-        
+
         newTag.querySelector('i').addEventListener('click', () => newTag.remove());
     }
 

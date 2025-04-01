@@ -84,6 +84,32 @@ main {
     border: 1px solid #eee;
 }
 
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.panel-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.action-btn:hover {
+    background: #eee;
+}
+
 textarea {
     width: calc(100% - 20px);
     min-height: 400px;
@@ -156,6 +182,15 @@ textarea:focus {
 .elf-file-item.is-dragging {
     opacity: 0.5;
     background: #f1f2f6;
+}
+
+.elf-file-item.active {
+    background: #e3f2fd;
+    border-color: var(--secondary-color);
+}
+
+.elf-file-item.active:hover {
+    transform: none;
 }
 
 .file-content {

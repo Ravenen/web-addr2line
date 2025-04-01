@@ -175,8 +175,8 @@ class Addr2LineConverter {
         const elfFilesList = document.getElementById('elfFilesList');
         new Sortable(elfFilesList, {
             animation: 150,
+            handle: '.drag-handle',  // Only allow dragging by the handle
             onEnd: async (evt) => {
-                const itemEl = evt.item;
                 const newIndex = evt.newIndex;
                 const oldIndex = evt.oldIndex;
 
@@ -191,12 +191,12 @@ class Addr2LineConverter {
         const elfFilesList = document.getElementById('elfFilesList');
         elfFilesList.innerHTML = this.elfFiles.map((file, index) => `
             <li class="elf-file-item ${index === this.activeFileIndex ? 'active' : ''}" 
-                data-index="${index}" 
-                onclick="converter.setActiveFile(${index})">
+                data-index="${index}" >
                 <i class="fas fa-grip-vertical drag-handle"></i>
-                <div class="file-content">
+                <div class="file-content" onclick="event.stopPropagation();converter.setActiveFile(${index})">
                     <span class="elf-file-name" contenteditable="true" 
                         onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+                        onclick="event.stopPropagation()"
                         onblur="converter.updateFileName(${index}, this.textContent)">
                         ${file.displayName || file.name}
                     </span>
@@ -207,16 +207,16 @@ class Addr2LineConverter {
                         ${file.tags.map(tag => `
                             <span class="tag">
                                 ${tag}
-                                <i class="fas fa-times" onclick="converter.removeTag(${index}, '${tag}')"></i>
+                                <i class="fas fa-times" onclick="event.stopPropagation();converter.removeTag(${index}, '${tag}')"></i>
                             </span>
                         `).join('')}
                     </div>
                 </div>
-                <div class="file-actions">
-                    <button onclick="converter.addEmptyTag(${index})">
+                <div class="file-actions" onclick="event.stopPropagation()">
+                    <button onclick="event.stopPropagation();converter.addEmptyTag(${index})">
                         <i class="fas fa-tag"></i>
                     </button>
-                    <button onclick="converter.removeFile(${index})">
+                    <button onclick="event.stopPropagation();converter.removeFile(${index})">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>

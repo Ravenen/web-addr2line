@@ -58,8 +58,10 @@ class Addr2LineConverter {
     async handleElfFileUpload(e) {
         const file = e.target.files[0];
         if (file) {
-            const elfFile = new ElfFile(file.path || file.name, URL.createObjectURL(file));
-            elfFile.displayName = null; // Use null to indicate no custom name set
+            // Get full path if available, otherwise use name
+            const fullPath = file.webkitRelativePath || file.path || file.name;
+            const elfFile = new ElfFile(fullPath, URL.createObjectURL(file));
+            elfFile.displayName = file.name;
             this.elfFiles.push(elfFile);
             this.saveElfFiles();
             this.renderElfFilesList();
@@ -109,7 +111,7 @@ class Addr2LineConverter {
                         onblur="converter.updateFileName(${index}, this.textContent)">
                         ${file.displayName || file.name}
                     </span>
-                    <div class="elf-file-path">${file.name}</div>
+                    <div class="elf-file-path" title="${file.name}">${file.name}</div>
                     <div class="elf-file-tags">
                         ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
                     </div>

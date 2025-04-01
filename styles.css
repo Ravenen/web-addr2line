@@ -39,7 +39,7 @@ header h1 {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 100%;
+    width: calc(100% - 24px);
     padding: 12px;
     background: var(--panel-background);
     border: 1px dashed var(--secondary-color);
@@ -47,7 +47,7 @@ header h1 {
     color: var(--secondary-color);
     font-weight: 500;
     justify-content: center;
-    margin-bottom: 16px;
+    margin: 0 auto 16px;
     transition: background-color 0.3s;
 }
 
@@ -61,15 +61,20 @@ header h1 {
 .main-layout {
     display: flex;
     gap: 24px;
+    flex-wrap: wrap;
 }
 
 .sidebar {
-    width: 320px;
+    width: 400px;
     flex-shrink: 0;
 }
 
 main {
     flex: 1;
+    min-width: 600px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
 }
 
 .input-panel, .output-panel {
@@ -188,12 +193,13 @@ textarea:focus {
 }
 
 .elf-file-path {
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
-    margin-top: 2px;
-    white-space: nowrap;
+    margin-top: 4px;
+    padding: 0 4px;
+    word-break: break-all;
+    max-height: 32px;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .elf-file-tags {
@@ -282,4 +288,40 @@ textarea:focus {
 
 .drag-handle:hover {
     color: var(--primary-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .main-layout {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+    }
+    
+    main {
+        min-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    main {
+        grid-template-columns: 1fr;
+    }
+    
+    .container {
+        padding: 10px;
+    }
+    
+    .elf-file-item {
+        flex-wrap: wrap;
+    }
+    
+    .file-actions {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
 }

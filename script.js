@@ -10,6 +10,7 @@ class Addr2LineConverter {
     constructor() {
         this.elfFiles = this.loadElfFiles();
         this.setupEventListeners();
+        this.apiUrl = 'http://localhost:8000'; // Change in production
     }
 
     loadElfFiles() {
@@ -80,20 +81,42 @@ class Addr2LineConverter {
         }
     }
 
-    convertText() {
+    async convertText() {
         const inputText = document.getElementById('inputText').value;
         const outputText = document.getElementById('outputText');
         
-        // Mock addr2line conversion (replace with actual implementation)
-        const convertedText = this.mockAddr2lineConversion(inputText);
-        outputText.textContent = convertedText;
-    }
+        // Check if we have any ELF files loaded
+        if (this.elfFiles.length === 0) {
+            outputText.textContent = 'Please load an ELF file first';
+            return;
+        }
 
-    mockAddr2lineConversion(text) {
-        // This is a mock implementation
-        // Replace with actual addr2line conversion logic
-        return text.replace(/0x[0-9a-fA-F]+/g, match => 
-            `${match} (converted: main.cpp:123)`);
+        try {
+            // Create form data with text and ELF file
+            const formData = new FormData();
+            formData.append('text', inputText);
+            
+            // Get the first ELF file's blob
+            const response = await fetch(this.elfFiles[0].path);
+            const blob = await response.blob();
+            formData.append('elf_file', blob, this.elfFiles[0].name);
+
+            // Send request to backend
+            const apiResponse = await fetch(`${this.apiUrl}/convert`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!apiResponse.ok) {
+                throw new Error('API request failed');
+            }
+
+            const result = await apiResponse.json();
+            outputText.textContent = result.converted_text;
+        } catch (error) {
+            console.error('Conversion error:', error);
+            outputText.textContent = 'Error during conversion: ' + error.message;
+        }
     }
 
     initializeDragAndDrop() {

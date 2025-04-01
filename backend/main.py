@@ -7,6 +7,7 @@ import re # Import regular expression module
 from typing import Dict, List, Optional, Set
 
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 # --- Configuration ---
@@ -84,6 +85,15 @@ app = FastAPI(
     version="1.1.0" # Version updated
 )
 
+# Update CORS configuration to allow your frontend origin
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:5500", "http://localhost:5500"],  # Add your frontend origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
+)
 
 # --- API Endpoint ---
 @app.post("/resolve_log",

@@ -85,34 +85,48 @@ class Addr2LineConverter {
         const inputText = document.getElementById('inputText').value;
         const outputText = document.getElementById('outputText');
         
-        // Check if we have any ELF files loaded
+        if (!inputText.trim()) {
+            outputText.textContent = '';
+            return;
+        }
+
         if (this.elfFiles.length === 0) {
             outputText.textContent = 'Please load an ELF file first';
             return;
         }
 
         try {
-            // Create form data with text and ELF file
             const formData = new FormData();
-            formData.append('text', inputText);
+            formData.append('log_text', inputText);
             
             // Get the first ELF file's blob
             const response = await fetch(this.elfFiles[0].path);
             const blob = await response.blob();
-            formData.append('elf_file', blob, this.elfFiles[0].name);
+            formData.append('elf_file', blob);
 
-            // Send request to backend
-            const apiResponse = await fetch(`${this.apiUrl}/convert`, {
+            // Send request to backend with proper CORS settings
+            const apiResponse = await fetch(`${this.apiUrl}/resolve_log`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                }
             });
 
             if (!apiResponse.ok) {
-                throw new Error('API request failed');
+                const errorData = await apiResponse.json();
+                throw new Error(errorData.detail || 'API request failed');
             }
 
             const result = await apiResponse.json();
-            outputText.textContent = result.converted_text;
+            outputText.textContent = result.resolved_log;
+
+            // Optionally display statistics
+            if (result.addresses_found > 0) {
+                outputText.textContent += `\n\n---\nStatistics:\nAddresses found: ${result.addresses_found}\nAddresses resolved: ${result.addresses_resolved}`;
+            }
         } catch (error) {
             console.error('Conversion error:', error);
             outputText.textContent = 'Error during conversion: ' + error.message;

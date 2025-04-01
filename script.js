@@ -1,8 +1,8 @@
 class ElfFile {
     constructor(name, path, content, tags = []) {
         this.name = name;
-        this.path = path;
-        this.content = content; // Store actual file content
+        this.fullPath = path;  // Store the full path separately
+        this.content = content;
         this.tags = tags;
     }
 }
@@ -155,13 +155,19 @@ class Addr2LineConverter {
             const elfFile = new ElfFile(
                 file.name,
                 fullPath,
-                content // Store actual file content
+                content
             );
             elfFile.displayName = file.name;
             this.elfFiles.push(elfFile);
             await this.saveElfFiles();
             this.activeFileIndex = this.elfFiles.length - 1;
             this.renderElfFilesList();
+            
+            // Trigger conversion if there's input text
+            const inputText = document.getElementById('inputText').value;
+            if (inputText.trim()) {
+                await this.convertText();
+            }
         }
     }
 

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web addr2line</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Web addr2line</h1>
+            <div class="elf-file-upload">
+                <label for="elfFile" class="upload-btn">Load ELF File</label>
+                <input type="file" id="elfFile" accept=".elf" hidden>
+            </div>
+        </header>
+
+        <div class="elf-files-list">
+            <h3>Loaded ELF Files</h3>
+            <ul id="elfFilesList"></ul>
+        </div>
+
+        <main>
+            <div class="input-panel">
+                <h2>Input Text</h2>
+                <textarea id="inputText" placeholder="Enter text with pointers or drop a file here"></textarea>
+            </div>
+            <div class="output-panel">
+                <h2>Converted Output</h2>
+                <div id="outputText" class="output-area"></div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

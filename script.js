@@ -1,8 +1,9 @@
 class ElfFile {
-    constructor(name, path, content, tags = []) {
+    constructor(name, path, contentBlob, tags = []) {
+        this.id = crypto.randomUUID(); // Add unique ID for DB operations
         this.name = name;
-        this.fullPath = path;  // Store the full path separately
-        this.content = content;
+        this.fullPath = path;
+        this.contentBlob = contentBlob; // Store as Blob for lazy loading
         this.tags = tags;
     }
 }
@@ -18,18 +19,28 @@ class Addr2LineConverter {
             });
         });
         this.apiUrl = 'http://localhost:8000'; // Change in production
+
+        window.addEventListener('beforeunload', () => {
+            // Clean up any blob URLs
+            this.elfFiles.forEach(file => {
+                if (file.contentBlob instanceof Blob) {
+                    URL.revokeObjectURL(URL.createObjectURL(file.contentBlob));
+                }
+            });
+        });
     }
 
     async initDB() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('addr2lineDB', 1);
+            const request = indexedDB.open('addr2lineDB', 2); // Increment version for schema update
 
             request.onerror = () => reject(request.error);
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
                 if (!db.objectStoreNames.contains('elfFiles')) {
-                    db.createObjectStore('elfFiles', { keyPath: 'id', autoIncrement: true });
+                    const store = db.createObjectStore('elfFiles', { keyPath: 'id' });
+                    store.createIndex('name', 'name');
                 }
             };
 
@@ -51,25 +62,27 @@ class Addr2LineConverter {
         });
     }
 
-    async saveElfFiles() {
+    async addElfFile(elfFile) {
         const transaction = this.db.transaction(['elfFiles'], 'readwrite');
         const store = transaction.objectStore('elfFiles');
+        await store.add(elfFile);
+        return elfFile.id;
+    }
 
-        // Clear existing records
-        const clearRequest = store.clear();
-        await new Promise((resolve, reject) => {
-            clearRequest.onsuccess = resolve;
-            clearRequest.onerror = reject;
-        });
+    async updateElfFile(elfFile) {
+        const transaction = this.db.transaction(['elfFiles'], 'readwrite');
+        const store = transaction.objectStore('elfFiles');
+        await store.put(elfFile);
+    }
 
-        // Add all current files
-        for (const file of this.elfFiles) {
-            const addRequest = store.add(file);
-            await new Promise((resolve, reject) => {
-                addRequest.onsuccess = resolve;
-                addRequest.onerror = reject;
-            });
-        }
+    async deleteElfFile(id) {
+        const transaction = this.db.transaction(['elfFiles'], 'readwrite');
+        const store = transaction.objectStore('elfFiles');
+        await store.delete(id);
+    }
+
+    async saveElfFiles() {
+        // No longer needed as individual operations are handled
     }
 
     setupEventListeners() {
@@ -166,31 +179,19 @@ class Addr2LineConverter {
     async handleElfFileUpload(e) {
         const file = e.target.files[0];
         if (file) {
-            // Read file content
-            const arrayBuffer = await file.arrayBuffer();
-            const content = Array.from(new Uint8Array(arrayBuffer));
-
-            let fullPath = file.webkitRelativePath || file.path || file.name;
-            if (fullPath === file.name) {
-                try {
-                    fullPath = e.target.files[0].mozFullPath || file.name;
-                } catch (e) {
-                    fullPath = file.name;
-                }
-            }
-
             const elfFile = new ElfFile(
                 file.name,
-                fullPath,
-                content
+                file.webkitRelativePath || file.path || file.name,
+                file // Store the File object directly
             );
             elfFile.displayName = file.name;
+            
+            const id = await this.addElfFile(elfFile);
             this.elfFiles.push(elfFile);
-            await this.saveElfFiles();
             this.activeFileIndex = this.elfFiles.length - 1;
             this.renderElfFilesList();
-            
-            // Trigger conversion if there's input text
+
+            // Convert if input exists
             const inputText = document.getElementById('inputText').value;
             if (inputText.trim()) {
                 await this.convertText();
@@ -209,7 +210,7 @@ class Addr2LineConverter {
 
                 const [movedItem] = this.elfFiles.splice(oldIndex, 1);
                 this.elfFiles.splice(newIndex, 0, movedItem);
-                await this.saveElfFiles();
+                await this.updateElfFile(movedItem);
             }
         });
     }
@@ -275,10 +276,9 @@ class Addr2LineConverter {
             const formData = new FormData();
             formData.append('log_text', inputText);
 
-            // Convert stored content back to blob
+            // Get the active file's content
             const activeFile = this.elfFiles[this.activeFileIndex];
-            const fileBlob = new Blob([new Uint8Array(activeFile.content)]);
-            formData.append('elf_file', fileBlob, activeFile.name);
+            formData.append('elf_file', activeFile.contentBlob, activeFile.name);
 
             const apiResponse = await fetch(`${this.apiUrl}/resolve_log`, {
                 method: 'POST',
@@ -317,13 +317,11 @@ class Addr2LineConverter {
         const input = newTag.querySelector('input');
         input.focus();
 
-        input.addEventListener('keydown', (e) => {
+        input.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter') {
                 const tag = input.value.trim();
                 if (tag && !this.elfFiles[index].tags.includes(tag)) {
-                    this.elfFiles[index].tags.push(tag);
-                    this.saveElfFiles();
-                    this.renderElfFilesList();
+                    await this.addTag(index, tag);
                 } else {
                     newTag.remove();
                 }
@@ -339,40 +337,35 @@ class Addr2LineConverter {
         newTag.querySelector('i').addEventListener('click', () => newTag.remove());
     }
 
-    removeTag(index, tag) {
+    async removeTag(index, tag) {
         this.elfFiles[index].tags = this.elfFiles[index].tags.filter(t => t !== tag);
-        this.saveElfFiles();
+        await this.updateElfFile(this.elfFiles[index]);
         this.renderElfFilesList();
     }
 
-    updateFileName(index, newName) {
+    async addTag(index, tag) {
+        this.elfFiles[index].tags.push(tag);
+        await this.updateElfFile(this.elfFiles[index]);
+        this.renderElfFilesList();
+    }
+
+    async updateFileName(index, newName) {
         this.elfFiles[index].displayName = newName;
-        this.saveElfFiles();
+        await this.updateElfFile(this.elfFiles[index]);
     }
 
     async removeFile(index) {
+        const file = this.elfFiles[index];
+        await this.deleteElfFile(file.id);
         this.elfFiles.splice(index, 1);
+        
         if (this.activeFileIndex === index) {
             this.activeFileIndex = this.elfFiles.length > 0 ? 0 : null;
         } else if (this.activeFileIndex > index) {
             this.activeFileIndex--;
         }
-        await this.saveElfFiles();
+        
         this.renderElfFilesList();
-    }
-
-    async fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    }
-
-    async base64ToBlob(base64) {
-        const response = await fetch(base64);
-        return response.blob();
     }
 }
 

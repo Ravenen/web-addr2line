@@ -124,9 +124,9 @@ class Addr2LineConverter {
             outputText.textContent = result.resolved_log;
 
             // Optionally display statistics
-            if (result.addresses_found > 0) {
-                outputText.textContent += `\n\n---\nStatistics:\nAddresses found: ${result.addresses_found}\nAddresses resolved: ${result.addresses_resolved}`;
-            }
+            // if (result.addresses_found > 0) {
+            //     outputText.textContent += `\n\n---\nStatistics:\nAddresses found: ${result.addresses_found}\nAddresses resolved: ${result.addresses_resolved}`;
+            // }
         } catch (error) {
             console.error('Conversion error:', error);
             outputText.textContent = 'Error during conversion: ' + error.message;

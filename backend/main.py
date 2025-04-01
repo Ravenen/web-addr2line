@@ -17,9 +17,23 @@ MAX_LOG_SIZE = 5 * 1024 * 1024     # Max 5 MB log text input
 MAX_ADDRESSES_TO_RESOLVE = 5000     # Limit distinct addresses sent to addr2line
 PROCESS_TIMEOUT = 30 # Increased timeout slightly for potentially more addresses
 
-# Define a regex to find potential hex addresses (e.g., 0xdeadbeef)
-# \b ensures word boundaries, adjust length {6,16} as needed
-ADDRESS_REGEX = re.compile(r"\b0x[0-9a-fA-F]{6,16}\b")
+# Prioritize 8-hex-digit addresses (no trailing boundary check)
+# Then match other common lengths (6-7, 9-16) ONLY if followed by a word boundary
+ADDRESS_REGEX = re.compile(
+    r"(?:"                          # Start NON-CAPTURING group for 8-digit
+    r"\b0x[0-9a-fA-F]{8}"
+    r")"
+    r"|(?:"                         # OR - Start NON-CAPTURING group for 6-7 digit
+    r"\b0x[0-9a-fA-F]{6,7}\b"
+    r")"
+    r"|(?:"                         # OR - Start NON-CAPTURING group for 9-16 digit
+    r"\b0x[0-9a-fA-F]{9,16}\b"
+    r")"
+)
+# Note: This regex uses capturing groups, but findall/sub will still work correctly
+# findall will return a list of strings corresponding to the *entire* match found
+# (e.g., "0x2003ffe0", "0xabcdef", "0x1122334455667788") because the | operator
+# makes the engine return the whole text matched by whichever alternative succeeded.
 
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,7 +46,7 @@ class ResolveLogResponse(BaseModel):
     addresses_resolved: int = Field(..., description="Number of unique addresses successfully resolved by addr2line.")
 
 
-# --- Helper Function to run addr2line (mostly unchanged) ---
+# --- Helper Function to run addr2line ---
 def run_addr2line(elf_path: str, addresses: List[str]) -> subprocess.CompletedProcess:
     """Executes addr2line securely and returns the process result."""
     if not ADDR2LINE_PATH:
@@ -48,7 +62,7 @@ def run_addr2line(elf_path: str, addresses: List[str]) -> subprocess.CompletedPr
 
     command = [ADDR2LINE_PATH, '-e', elf_path, '-f', '-C'] + addresses
     # Avoid logging potentially huge command if addresses list is massive
-    logger.info(f"Running addr2line for {len(addresses)} unique addresses using {elf_path}")
+    logger.info(f"Running addr2line for {len(addresses)} unique addresses using {elf_path}: {addresses}")
 
     try:
         process = subprocess.run(
@@ -78,11 +92,12 @@ def run_addr2line(elf_path: str, addresses: List[str]) -> subprocess.CompletedPr
             detail="Failed to execute addr2line process.",
         )
 
+
 # --- FastAPI App ---
 app = FastAPI(
     title="Addr2Line Log Resolver Service",
     description="Accepts log text and an ELF file, resolves addresses within the log, and returns the modified log.",
-    version="1.1.0" # Version updated
+    version="1.3.0"
 )
 
 # Update CORS configuration to allow your frontend origin
@@ -135,6 +150,8 @@ async def resolve_log_addresses(
 
     try:
         # --- Extract Unique Addresses ---
+        # findall with this regex pattern will return the full matched string
+        # regardless of which alternative capture group matched it.
         found_addresses: Set[str] = set(ADDRESS_REGEX.findall(log_text))
         unique_addresses: List[str] = sorted(list(found_addresses)) # Sort for consistent addr2line input/output order
         num_unique_addresses = len(unique_addresses)
@@ -190,10 +207,10 @@ async def resolve_log_addresses(
                 # Format the replacement string
                 if func_name != "??" and file_line != "??:0":
                     resolved_string = f"{func_name} ({file_line})" # e.g., main (main.c:55)
-                    resolved_count +=1
+                    resolved_count += 1
                 elif file_line != "??:0":
                      resolved_string = file_line # e.g., main.c:55
-                     resolved_count +=1
+                     resolved_count += 1
                 else:
                     resolved_string = original_addr # Keep original if unresolved
 
@@ -215,6 +232,7 @@ async def resolve_log_addresses(
             # Return resolved string if found, otherwise return original address
             return addr2line_results_map.get(addr, addr)
 
+        # Apply the substitution using the *same* regex used for finding addresses
         modified_log_text = ADDRESS_REGEX.sub(replace_match, log_text)
 
         logger.info(f"Finished processing. Found: {num_unique_addresses}, Resolved: {resolved_count}")
@@ -224,6 +242,7 @@ async def resolve_log_addresses(
             addresses_resolved=resolved_count
             )
 
+    # --- Exception Handling and Cleanup ---
     except HTTPException as http_exc:
          # Log and re-raise known HTTP exceptions
          logger.warning(f"HTTP Exception during processing: {http_exc.detail}")
@@ -249,8 +268,7 @@ async def resolve_log_addresses(
             except Exception as e:
                 logger.warning(f"Error closing upload file stream: {e}")
 
-
-# --- Health Check Endpoint (Good Practice) ---
+# --- Health Check Endpoint ---
 @app.get("/health", status_code=status.HTTP_200_OK, summary="Health Check")
 async def health_check():
     """Simple health check endpoint."""

@@ -58,10 +58,22 @@ class Addr2LineConverter {
     async handleElfFileUpload(e) {
         const file = e.target.files[0];
         if (file) {
-            const fullPath = file.webkitRelativePath || file.path || file.name;
-            const elfFile = new ElfFile(fullPath, URL.createObjectURL(file));
+            // Try to get the full path, fallback to name if not available
+            let fullPath = file.webkitRelativePath || file.path || file.name;
+            
+            // If we only have the filename, try to get the full path from the input
+            if (fullPath === file.name) {
+                try {
+                    fullPath = e.target.files[0].mozFullPath || file.name;
+                } catch (e) {
+                    // Fallback to name if full path is not available
+                    fullPath = file.name;
+                }
+            }
+            
+            const elfFile = new ElfFile(file.name, URL.createObjectURL(file));
             elfFile.displayName = file.name;
-            elfFile.fullPath = fullPath;  // Store full path separately
+            elfFile.fullPath = fullPath;
             this.elfFiles.push(elfFile);
             this.saveElfFiles();
             this.renderElfFilesList();
@@ -111,8 +123,8 @@ class Addr2LineConverter {
                         onblur="converter.updateFileName(${index}, this.textContent)">
                         ${file.displayName || file.name}
                     </span>
-                    <div class="elf-file-path" title="${file.fullPath || file.name}">
-                        ${file.fullPath || file.name}
+                    <div class="elf-file-path" title="${file.fullPath}">
+                        ${file.fullPath}
                     </div>
                     <div class="elf-file-tags">
                         ${file.tags.map(tag => `
@@ -124,7 +136,7 @@ class Addr2LineConverter {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button onclick="converter.showTagInput(${index})">
+                    <button onclick="converter.addEmptyTag(${index})">
                         <i class="fas fa-tag"></i>
                     </button>
                     <button onclick="converter.removeFile(${index})">
@@ -135,38 +147,41 @@ class Addr2LineConverter {
         `).join('');
     }
 
-    showTagInput(index) {
-        const tagInput = document.createElement('div');
-        tagInput.className = 'tag-input-wrapper active';
-        tagInput.innerHTML = `
-            <div class="tag-input-container">
-                <input type="text" class="tag-input" placeholder="Enter tag" autofocus>
-            </div>
+    addEmptyTag(index) {
+        const tagsContainer = document.querySelector(`[data-index="${index}"] .elf-file-tags`);
+        const newTag = document.createElement('span');
+        newTag.className = 'tag editing';
+        newTag.innerHTML = `
+            <input type="text" placeholder="Enter tag" autofocus>
+            <i class="fas fa-times"></i>
         `;
         
-        document.body.appendChild(tagInput);
+        // Insert before the add button
+        tagsContainer.insertBefore(newTag, tagsContainer.lastElementChild);
         
-        const input = tagInput.querySelector('input');
+        const input = newTag.querySelector('input');
         input.focus();
         
-        const handleKeyPress = (e) => {
+        input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 const tag = input.value.trim();
                 if (tag && !this.elfFiles[index].tags.includes(tag)) {
                     this.elfFiles[index].tags.push(tag);
                     this.saveElfFiles();
                     this.renderElfFilesList();
+                } else {
+                    newTag.remove();
                 }
-                tagInput.remove();
             } else if (e.key === 'Escape') {
-                tagInput.remove();
+                newTag.remove();
             }
-        };
-        
-        input.addEventListener('keydown', handleKeyPress);
-        tagInput.addEventListener('click', (e) => {
-            if (e.target === tagInput) tagInput.remove();
         });
+        
+        input.addEventListener('blur', () => {
+            setTimeout(() => newTag.remove(), 200);
+        });
+        
+        newTag.querySelector('i').addEventListener('click', () => newTag.remove());
     }
 
     removeTag(index, tag) {

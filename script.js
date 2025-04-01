@@ -75,7 +75,34 @@ class Addr2LineConverter {
     setupEventListeners() {
         const inputText = document.getElementById('inputText');
         const elfFileInput = document.getElementById('elfFile');
+        const elfUploadBtn = document.getElementById('elfUploadBtn');
         const textFileInput = document.getElementById('textFile');
+
+        // ELF file drag and drop
+        elfUploadBtn.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            elfUploadBtn.classList.add('dragover');
+        });
+
+        elfUploadBtn.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.relatedTarget && !elfUploadBtn.contains(e.relatedTarget)) {
+                elfUploadBtn.classList.remove('dragover');
+            }
+        });
+
+        elfUploadBtn.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            elfUploadBtn.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                this.handleElfFileUpload({ target: { files: [file] } });
+            }
+        });
 
         // Text input handling
         inputText.addEventListener('input', () => this.convertText());

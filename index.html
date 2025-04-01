@@ -19,8 +19,9 @@
                 <div class="elf-files-list">
                     <h3>Loaded ELF Files</h3>
                     <div class="elf-file-upload">
-                        <label for="elfFile" class="upload-btn">
+                        <label for="elfFile" class="upload-btn" id="elfUploadBtn">
                             <i class="fas fa-plus"></i> Add ELF File
+                            <span class="upload-hint">or drop file here</span>
                         </label>
                         <input type="file" id="elfFile" accept=".elf" hidden>
                     </div>
@@ -42,7 +43,7 @@
                             </button>
                         </div>
                     </div>
-                    <textarea id="inputText" placeholder="Three ways to input text:&#10;&#10;1. Type or paste text directly&#10;2. Drag and drop a text file here&#10;3. Click the upload button above"></textarea>
+                    <textarea id="inputText" placeholder="1. Type or paste text directly&#10;2. Drag and drop a text file here&#10;3. Click the upload button above"></textarea>
                 </div>
                 <div class="output-panel">
                     <div class="panel-header">

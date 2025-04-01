@@ -58,7 +58,8 @@ class Addr2LineConverter {
     async handleElfFileUpload(e) {
         const file = e.target.files[0];
         if (file) {
-            const elfFile = new ElfFile(file.name, URL.createObjectURL(file));
+            const elfFile = new ElfFile(file.path || file.name, URL.createObjectURL(file));
+            elfFile.displayName = null; // Use null to indicate no custom name set
             this.elfFiles.push(elfFile);
             this.saveElfFiles();
             this.renderElfFilesList();
@@ -103,25 +104,30 @@ class Addr2LineConverter {
         elfFilesList.innerHTML = this.elfFiles.map((file, index) => `
             <li class="elf-file-item" data-index="${index}">
                 <i class="fas fa-grip-vertical drag-handle"></i>
-                <span class="elf-file-name" contenteditable="true" 
-                    onblur="converter.updateFileName(${index}, this.textContent)">
-                    ${file.name}
-                </span>
-                <div class="elf-file-tags">
-                    ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                <div class="file-content">
+                    <span class="elf-file-name" contenteditable="true" 
+                        onblur="converter.updateFileName(${index}, this.textContent)">
+                        ${file.displayName || file.name}
+                    </span>
+                    <div class="elf-file-path">${file.name}</div>
+                    <div class="elf-file-tags">
+                        ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    </div>
                 </div>
-                <button onclick="converter.addTag(${index})">
-                    <i class="fas fa-tag"></i> Add Tag
-                </button>
-                <button onclick="converter.removeFile(${index})">
-                    <i class="fas fa-trash"></i> Remove
-                </button>
+                <div class="file-actions">
+                    <button onclick="converter.addTag(${index})">
+                        <i class="fas fa-tag"></i>
+                    </button>
+                    <button onclick="converter.removeFile(${index})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </li>
         `).join('');
     }
 
     updateFileName(index, newName) {
-        this.elfFiles[index].name = newName;
+        this.elfFiles[index].displayName = newName;
         this.saveElfFiles();
     }
 

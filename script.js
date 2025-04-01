@@ -113,13 +113,22 @@ class Addr2LineConverter {
                     </span>
                     <div class="elf-file-path" title="${file.name}">${file.name}</div>
                     <div class="elf-file-tags">
-                        ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        ${file.tags.map(tag => `
+                            <span class="tag">
+                                ${tag}
+                                <i class="fas fa-times" onclick="converter.removeTag(${index}, '${tag}')"></i>
+                            </span>
+                        `).join('')}
+                        <div class="tag-input-container">
+                            <input type="text" 
+                                class="tag-input" 
+                                placeholder="Add tag"
+                                onkeypress="converter.handleTagInput(event, ${index})"
+                            >
+                        </div>
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button onclick="converter.addTag(${index})">
-                        <i class="fas fa-tag"></i>
-                    </button>
                     <button onclick="converter.removeFile(${index})">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -128,18 +137,28 @@ class Addr2LineConverter {
         `).join('');
     }
 
+    handleTagInput(event, index) {
+        if (event.key === 'Enter') {
+            const input = event.target;
+            const tag = input.value.trim();
+            if (tag && !this.elfFiles[index].tags.includes(tag)) {
+                this.elfFiles[index].tags.push(tag);
+                this.saveElfFiles();
+                this.renderElfFilesList();
+            }
+            input.value = '';
+        }
+    }
+
+    removeTag(index, tag) {
+        this.elfFiles[index].tags = this.elfFiles[index].tags.filter(t => t !== tag);
+        this.saveElfFiles();
+        this.renderElfFilesList();
+    }
+
     updateFileName(index, newName) {
         this.elfFiles[index].displayName = newName;
         this.saveElfFiles();
-    }
-
-    addTag(index) {
-        const tag = prompt('Enter new tag:');
-        if (tag) {
-            this.elfFiles[index].tags.push(tag);
-            this.saveElfFiles();
-            this.renderElfFilesList();
-        }
     }
 
     removeFile(index) {

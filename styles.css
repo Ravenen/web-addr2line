@@ -16,7 +16,7 @@ body {
 }
 
 .container {
-    max-width: 1400px;
+    max-width: 1800px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -65,7 +65,7 @@ header h1 {
 }
 
 .sidebar {
-    width: 400px;
+    width: 500px;
     flex-shrink: 0;
 }
 
@@ -138,7 +138,8 @@ textarea:focus {
 .elf-file-item {
     display: flex;
     align-items: center;
-    padding: 12px 16px;
+    padding: 16px;
+    gap: 12px;
     background: white;
     margin-bottom: 5px;
     border-radius: 4px;
@@ -161,6 +162,7 @@ textarea:focus {
     flex: 1;
     min-width: 0;
     position: relative;
+    margin-right: 16px;
 }
 
 .elf-file-name {
@@ -204,7 +206,10 @@ textarea:focus {
 
 .elf-file-tags {
     display: flex;
-    gap: 5px;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    max-width: 100%;
 }
 
 .tag {
@@ -219,6 +224,32 @@ textarea:focus {
 
 .tag:hover {
     transform: translateY(-1px);
+}
+
+.tag-input-container {
+    position: relative;
+    display: inline-block;
+}
+
+.tag-input {
+    padding: 4px 8px;
+    border: 1px solid var(--secondary-color);
+    border-radius: 12px;
+    font-size: 12px;
+    outline: none;
+    width: 80px;
+    background: transparent;
+}
+
+.tag-input:focus {
+    border-color: var(--accent-color);
+    width: 120px;
+}
+
+.file-actions {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
 }
 
 .elf-file-item button {
@@ -291,6 +322,16 @@ textarea:focus {
 }
 
 /* Responsive adjustments */
+@media (max-width: 1400px) {
+    .main-layout {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+    }
+}
+
 @media (max-width: 1200px) {
     .main-layout {
         flex-direction: column;

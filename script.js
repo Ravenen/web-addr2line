@@ -1,26 +1,75 @@
 class ElfFile {
-    constructor(name, path, data, tags = []) {
+    constructor(name, path, content, tags = []) {
         this.name = name;
         this.path = path;
-        this.data = data; // Store file data as base64
+        this.content = content; // Store actual file content
         this.tags = tags;
     }
 }
 
 class Addr2LineConverter {
     constructor() {
-        this.elfFiles = this.loadElfFiles();
-        this.setupEventListeners();
+        this.initDB().then(() => {
+            this.loadElfFiles().then(files => {
+                this.elfFiles = files;
+                this.activeFileIndex = files.length > 0 ? 0 : null;
+                this.setupEventListeners();
+                this.renderElfFilesList();
+            });
+        });
         this.apiUrl = 'http://localhost:8000'; // Change in production
-        this.activeFileIndex = this.elfFiles.length > 0 ? 0 : null;
     }
 
-    loadElfFiles() {
-        return JSON.parse(localStorage.getItem('elfFiles')) || [];
+    async initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('addr2lineDB', 1);
+
+            request.onerror = () => reject(request.error);
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('elfFiles')) {
+                    db.createObjectStore('elfFiles', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+
+            request.onsuccess = () => {
+                this.db = request.result;
+                resolve();
+            };
+        });
     }
 
-    saveElfFiles() {
-        localStorage.setItem('elfFiles', JSON.stringify(this.elfFiles));
+    async loadElfFiles() {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['elfFiles'], 'readonly');
+            const store = transaction.objectStore('elfFiles');
+            const request = store.getAll();
+
+            request.onsuccess = () => resolve(request.result || []);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async saveElfFiles() {
+        const transaction = this.db.transaction(['elfFiles'], 'readwrite');
+        const store = transaction.objectStore('elfFiles');
+
+        // Clear existing records
+        const clearRequest = store.clear();
+        await new Promise((resolve, reject) => {
+            clearRequest.onsuccess = resolve;
+            clearRequest.onerror = reject;
+        });
+
+        // Add all current files
+        for (const file of this.elfFiles) {
+            const addRequest = store.add(file);
+            await new Promise((resolve, reject) => {
+                addRequest.onsuccess = resolve;
+                addRequest.onerror = reject;
+            });
+        }
     }
 
     setupEventListeners() {
@@ -48,7 +97,6 @@ class Addr2LineConverter {
         elfFileInput.addEventListener('change', (e) => this.handleElfFileUpload(e));
 
         this.initializeDragAndDrop();
-        this.renderElfFilesList();
     }
 
     async handleTextFileDrop(e) {
@@ -76,6 +124,7 @@ class Addr2LineConverter {
     clearInput() {
         document.getElementById('inputText').value = '';
         document.getElementById('outputText').textContent = '';
+        inputWrapper.classList.remove('has-content');
     }
 
     async copyOutput() {
@@ -90,8 +139,11 @@ class Addr2LineConverter {
     async handleElfFileUpload(e) {
         const file = e.target.files[0];
         if (file) {
-            let fullPath = file.webkitRelativePath || file.path || file.name;
+            // Read file content
+            const arrayBuffer = await file.arrayBuffer();
+            const content = Array.from(new Uint8Array(arrayBuffer));
 
+            let fullPath = file.webkitRelativePath || file.path || file.name;
             if (fullPath === file.name) {
                 try {
                     fullPath = e.target.files[0].mozFullPath || file.name;
@@ -100,18 +152,14 @@ class Addr2LineConverter {
                 }
             }
 
-            // Read file as base64
-            const fileData = await this.fileToBase64(file);
-
             const elfFile = new ElfFile(
                 file.name,
-                URL.createObjectURL(file), // Keep for backward compatibility
-                fileData
+                fullPath,
+                content // Store actual file content
             );
             elfFile.displayName = file.name;
-            elfFile.fullPath = fullPath;
             this.elfFiles.push(elfFile);
-            this.saveElfFiles();
+            await this.saveElfFiles();
             this.activeFileIndex = this.elfFiles.length - 1;
             this.renderElfFilesList();
         }
@@ -121,14 +169,14 @@ class Addr2LineConverter {
         const elfFilesList = document.getElementById('elfFilesList');
         new Sortable(elfFilesList, {
             animation: 150,
-            onEnd: (evt) => {
+            onEnd: async (evt) => {
                 const itemEl = evt.item;
                 const newIndex = evt.newIndex;
                 const oldIndex = evt.oldIndex;
 
                 const [movedItem] = this.elfFiles.splice(oldIndex, 1);
                 this.elfFiles.splice(newIndex, 0, movedItem);
-                this.saveElfFiles();
+                await this.saveElfFiles();
             }
         });
     }
@@ -194,9 +242,9 @@ class Addr2LineConverter {
             const formData = new FormData();
             formData.append('log_text', inputText);
 
-            // Convert base64 back to blob
+            // Convert stored content back to blob
             const activeFile = this.elfFiles[this.activeFileIndex];
-            const fileBlob = await this.base64ToBlob(activeFile.data);
+            const fileBlob = new Blob([new Uint8Array(activeFile.content)]);
             formData.append('elf_file', fileBlob, activeFile.name);
 
             const apiResponse = await fetch(`${this.apiUrl}/resolve_log`, {
@@ -269,9 +317,14 @@ class Addr2LineConverter {
         this.saveElfFiles();
     }
 
-    removeFile(index) {
+    async removeFile(index) {
         this.elfFiles.splice(index, 1);
-        this.saveElfFiles();
+        if (this.activeFileIndex === index) {
+            this.activeFileIndex = this.elfFiles.length > 0 ? 0 : null;
+        } else if (this.activeFileIndex > index) {
+            this.activeFileIndex--;
+        }
+        await this.saveElfFiles();
         this.renderElfFilesList();
     }
 

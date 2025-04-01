@@ -1,7 +1,8 @@
 class ElfFile {
-    constructor(name, path, tags = []) {
+    constructor(name, path, data, tags = []) {
         this.name = name;
         this.path = path;
+        this.data = data; // Store file data as base64
         this.tags = tags;
     }
 }
@@ -99,7 +100,14 @@ class Addr2LineConverter {
                 }
             }
 
-            const elfFile = new ElfFile(file.name, URL.createObjectURL(file));
+            // Read file as base64
+            const fileData = await this.fileToBase64(file);
+
+            const elfFile = new ElfFile(
+                file.name,
+                URL.createObjectURL(file), // Keep for backward compatibility
+                fileData
+            );
             elfFile.displayName = file.name;
             elfFile.fullPath = fullPath;
             this.elfFiles.push(elfFile);
@@ -186,9 +194,10 @@ class Addr2LineConverter {
             const formData = new FormData();
             formData.append('log_text', inputText);
 
-            const response = await fetch(this.elfFiles[this.activeFileIndex].path);
-            const blob = await response.blob();
-            formData.append('elf_file', blob);
+            // Convert base64 back to blob
+            const activeFile = this.elfFiles[this.activeFileIndex];
+            const fileBlob = await this.base64ToBlob(activeFile.data);
+            formData.append('elf_file', fileBlob, activeFile.name);
 
             const apiResponse = await fetch(`${this.apiUrl}/resolve_log`, {
                 method: 'POST',
@@ -264,6 +273,20 @@ class Addr2LineConverter {
         this.elfFiles.splice(index, 1);
         this.saveElfFiles();
         this.renderElfFilesList();
+    }
+
+    async fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async base64ToBlob(base64) {
+        const response = await fetch(base64);
+        return response.blob();
     }
 }
 

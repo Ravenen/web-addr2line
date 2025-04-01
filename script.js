@@ -58,10 +58,10 @@ class Addr2LineConverter {
     async handleElfFileUpload(e) {
         const file = e.target.files[0];
         if (file) {
-            // Get full path if available, otherwise use name
             const fullPath = file.webkitRelativePath || file.path || file.name;
             const elfFile = new ElfFile(fullPath, URL.createObjectURL(file));
             elfFile.displayName = file.name;
+            elfFile.fullPath = fullPath;  // Store full path separately
             this.elfFiles.push(elfFile);
             this.saveElfFiles();
             this.renderElfFilesList();
@@ -111,7 +111,9 @@ class Addr2LineConverter {
                         onblur="converter.updateFileName(${index}, this.textContent)">
                         ${file.displayName || file.name}
                     </span>
-                    <div class="elf-file-path" title="${file.name}">${file.name}</div>
+                    <div class="elf-file-path" title="${file.fullPath || file.name}">
+                        ${file.fullPath || file.name}
+                    </div>
                     <div class="elf-file-tags">
                         ${file.tags.map(tag => `
                             <span class="tag">
@@ -119,16 +121,12 @@ class Addr2LineConverter {
                                 <i class="fas fa-times" onclick="converter.removeTag(${index}, '${tag}')"></i>
                             </span>
                         `).join('')}
-                        <div class="tag-input-container">
-                            <input type="text" 
-                                class="tag-input" 
-                                placeholder="Add tag"
-                                onkeypress="converter.handleTagInput(event, ${index})"
-                            >
-                        </div>
                     </div>
                 </div>
                 <div class="file-actions">
+                    <button onclick="converter.showTagInput(${index})">
+                        <i class="fas fa-tag"></i>
+                    </button>
                     <button onclick="converter.removeFile(${index})">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -137,17 +135,38 @@ class Addr2LineConverter {
         `).join('');
     }
 
-    handleTagInput(event, index) {
-        if (event.key === 'Enter') {
-            const input = event.target;
-            const tag = input.value.trim();
-            if (tag && !this.elfFiles[index].tags.includes(tag)) {
-                this.elfFiles[index].tags.push(tag);
-                this.saveElfFiles();
-                this.renderElfFilesList();
+    showTagInput(index) {
+        const tagInput = document.createElement('div');
+        tagInput.className = 'tag-input-wrapper active';
+        tagInput.innerHTML = `
+            <div class="tag-input-container">
+                <input type="text" class="tag-input" placeholder="Enter tag" autofocus>
+            </div>
+        `;
+        
+        document.body.appendChild(tagInput);
+        
+        const input = tagInput.querySelector('input');
+        input.focus();
+        
+        const handleKeyPress = (e) => {
+            if (e.key === 'Enter') {
+                const tag = input.value.trim();
+                if (tag && !this.elfFiles[index].tags.includes(tag)) {
+                    this.elfFiles[index].tags.push(tag);
+                    this.saveElfFiles();
+                    this.renderElfFilesList();
+                }
+                tagInput.remove();
+            } else if (e.key === 'Escape') {
+                tagInput.remove();
             }
-            input.value = '';
-        }
+        };
+        
+        input.addEventListener('keydown', handleKeyPress);
+        tagInput.addEventListener('click', (e) => {
+            if (e.target === tagInput) tagInput.remove();
+        });
     }
 
     removeTag(index, tag) {

@@ -65,7 +65,7 @@ header h1 {
 }
 
 .sidebar {
-    width: 500px;
+    width: 400px;
     flex-shrink: 0;
 }
 
@@ -138,8 +138,8 @@ textarea:focus {
 .elf-file-item {
     display: flex;
     align-items: center;
-    padding: 16px;
-    gap: 12px;
+    padding: 12px;
+    gap: 8px;
     background: white;
     margin-bottom: 5px;
     border-radius: 4px;
@@ -162,7 +162,7 @@ textarea:focus {
     flex: 1;
     min-width: 0;
     position: relative;
-    margin-right: 16px;
+    margin-right: 8px;
 }
 
 .elf-file-name {
@@ -197,48 +197,70 @@ textarea:focus {
 .elf-file-path {
     font-size: 11px;
     color: #666;
-    margin-top: 4px;
-    padding: 0 4px;
+    margin: 2px 4px;
     word-break: break-all;
-    max-height: 32px;
-    overflow: hidden;
+    max-height: none;
+    white-space: normal;
 }
 
 .elf-file-tags {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
-    margin-top: 8px;
+    margin-top: 6px;
     max-width: 100%;
 }
 
 .tag {
-    background: var(--secondary-color);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 16px;
-    font-size: 12px;
-    font-weight: 500;
-    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #e3f2fd;
+    color: var(--secondary-color);
+    padding: 2px 8px;
+    font-size: 11px;
 }
 
-.tag:hover {
-    transform: translateY(-1px);
+.tag i {
+    font-size: 10px;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.tag i:hover {
+    color: var(--danger-color);
+}
+
+.tag-input-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.tag-input-wrapper.active {
+    display: flex;
 }
 
 .tag-input-container {
-    position: relative;
-    display: inline-block;
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
 }
 
 .tag-input {
-    padding: 4px 8px;
-    border: 1px solid var(--secondary-color);
-    border-radius: 12px;
-    font-size: 12px;
-    outline: none;
-    width: 80px;
-    background: transparent;
+    width: 200px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
 }
 
 .tag-input:focus {

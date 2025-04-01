@@ -194,16 +194,17 @@ textarea:focus {
     color: #999;
 }
 
+.elf-file-name br {
+    display: none;
+}
+
 .elf-file-path {
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
-    margin: 4px 4px 8px;
-    padding: 4px 8px;
-    background: #f8f9fa;
-    border-radius: 4px;
+    margin: 2px 4px;
     word-break: break-all;
-    line-height: 1.4;
-    font-family: monospace;
+    max-height: none;
+    white-space: normal;
 }
 
 .elf-file-tags {
@@ -229,7 +230,7 @@ textarea:focus {
 .tag.editing {
     background: white;
     border: 1px solid var(--secondary-color);
-    /* padding: 3px 11px; */
+    margin: 0;
 }
 
 .tag input {

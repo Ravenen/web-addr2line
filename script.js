@@ -120,6 +120,7 @@ class Addr2LineConverter {
                 <i class="fas fa-grip-vertical drag-handle"></i>
                 <div class="file-content">
                     <span class="elf-file-name" contenteditable="true" 
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
                         onblur="converter.updateFileName(${index}, this.textContent)">
                         ${file.displayName || file.name}
                     </span>
@@ -156,8 +157,8 @@ class Addr2LineConverter {
             <i class="fas fa-times"></i>
         `;
         
-        // Insert before the add button
-        tagsContainer.insertBefore(newTag, tagsContainer.lastElementChild);
+        // Append to the end of tags container
+        tagsContainer.appendChild(newTag);
         
         const input = newTag.querySelector('input');
         input.focus();

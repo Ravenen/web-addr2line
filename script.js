@@ -276,25 +276,21 @@ class Addr2LineConverter {
             const fileArrayBuffer = await activeFile.contentBlob.arrayBuffer();
             const fileBytes = new Uint8Array(fileArrayBuffer);
             
-            // Use the stored Addr2LineProcessor class
             const processor = new this.Addr2LineProcessor(fileBytes);
 
-            // Split input text into lines and process each line
             const lines = inputText.split('\n');
             const resolvedLines = [];
 
             for (const line of lines) {
                 let resolvedLine = line;
-                // Find all hexadecimal addresses in the line
                 const matches = line.match(/0x[0-9a-fA-F]+\b/g);
                 
                 if (matches) {
                     for (const match of matches) {
                         try {
                             const address = BigInt(match);
-                            const frames = processor.lookupFrames(address);
-                            if (frames && frames.length > 0) {
-                                const location = frames.join('\n    ');
+                            const location = processor.lookupAddress(address);
+                            if (location) {
                                 resolvedLine = resolvedLine.replace(match, `${match} (${location})`);
                             }
                         } catch (e) {
@@ -306,7 +302,7 @@ class Addr2LineConverter {
             }
 
             outputText.textContent = resolvedLines.join('\n');
-            processor.free(); // Clean up wasm resources
+            processor.free();
 
         } catch (error) {
             console.error('Conversion error:', error);

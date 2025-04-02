@@ -2,10 +2,6 @@ name: Common Build Steps
 
 on:
   workflow_call:
-    outputs:
-      build-path:
-        description: "Path to the built website files"
-        value: ./www
 
 jobs:
   build:
@@ -27,3 +23,8 @@ jobs:
         run: npm run build
         env:
           CARGO_TERM_COLOR: always
+
+      - name: Upload artifact 📦
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./www

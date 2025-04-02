@@ -29,7 +29,7 @@ jobs:
         id: build
         run: |
           npm run build
-          echo "build-path=www" >> "$GITHUB_OUTPUT"
+          echo "build-path=www/" >> "$GITHUB_OUTPUT"
         env:
           CARGO_TERM_COLOR: always
 

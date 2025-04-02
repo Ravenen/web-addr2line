@@ -2,10 +2,16 @@ name: Common Build Steps
 
 on:
   workflow_call:
+    outputs:
+      build-path:
+        description: "Path to the built website files"
+        value: ${{ jobs.build.outputs.build-path }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      build-path: ${{ steps.build.outputs.build-path }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,11 +26,17 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build Wasm and Site
-        run: npm run build
+        id: build
+        run: |
+          npm run build
+          echo "build-path=www" >> "$GITHUB_OUTPUT"
         env:
           CARGO_TERM_COLOR: always
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          path: ./www
+          name: build-artifact
+          path: ${{ steps.build.outputs.build-path }}
+          retention-days: 1
+

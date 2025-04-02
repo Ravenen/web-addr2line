@@ -5,26 +5,25 @@ on:
     outputs:
       build-path:
         description: "Path to the built website files"
-        value: www
+        value: ./www
 
 jobs:
   build:
-    name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout 🛎️
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Rust toolchain 🦀
+      - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           components: rust-src
 
-      - name: Install wasm-pack 📦
+      - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-      - name: Build Wasm and Site 🛠️
+      - name: Build Wasm and Site
         run: npm run build
         env:
           CARGO_TERM_COLOR: always

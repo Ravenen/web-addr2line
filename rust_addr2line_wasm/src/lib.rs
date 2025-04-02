@@ -1,7 +1,7 @@
-use addr2line::{Context, Location}; // Removed FrameIter
-use gimli::{DwLang, EndianRcSlice}; // Added DwLang here
-use object::{File, Object, ObjectKind}; // Ensure File is imported
-use std::{borrow::Cow, rc::Rc}; // Added Cow for type signatures
+use addr2line::{Context, Location};
+use gimli::{EndianRcSlice};
+use object::{Object, ObjectKind};
+use std::{rc::Rc};
 use wasm_bindgen::prelude::*;
 
 // Optional: Better panic messages in the JS console
@@ -95,7 +95,6 @@ impl Addr2LineProcessor {
         let js_frames = js_sys::Array::new();
 
         while let Ok(Some(frame)) = frames_iter.next() {
-             // *** REVISED FUNCTION NAME LOGIC ***
              let func_name = match frame.function.as_ref() {
                  Some(function_name) => {
                      match function_name.raw_name() { // Handle Result from raw_name()

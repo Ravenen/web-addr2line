@@ -80,10 +80,6 @@ class Addr2LineConverter {
         await store.delete(id);
     }
 
-    async saveElfFiles() {
-        // No longer needed as individual operations are handled
-    }
-
     setupEventListeners() {
         const inputText = document.getElementById('inputText');
         const elfFileInput = document.getElementById('elfFile');
@@ -163,7 +159,6 @@ class Addr2LineConverter {
     clearInput() {
         document.getElementById('inputText').value = '';
         document.getElementById('outputText').textContent = '';
-        inputWrapper.classList.remove('has-content');
     }
 
     async copyOutput() {

@@ -1,0 +1,14 @@
+{
+    "name": "web-addr2line",
+    "version": "1.0.0",
+    "description": "Web tool to convert addresses to file names and line numbers using addr2line",
+    "private": true,
+    "scripts": {
+        "build:wasm": "cd rust_addr2line_wasm && wasm-pack build --target web --out-dir ../www/pkg --out-name rust_addr2line_wasm",
+        "build": "npm run build:wasm",
+        "serve": "serve www"
+    },
+    "devDependencies": {
+        "serve": "^14.2.4"
+    }
+}

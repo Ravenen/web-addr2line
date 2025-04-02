@@ -1,4 +1,4 @@
-import init, { Addr2LineProcessor } from './lib/rust_addr2line_wasm.js';
+import init, { Addr2LineProcessor } from './pkg/rust_addr2line_wasm.js';
 
 class ElfFile {
     constructor(name, path, contentBlob, tags = []) {

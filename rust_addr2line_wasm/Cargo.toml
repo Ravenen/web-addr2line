@@ -1,0 +1,22 @@
+[package]
+name = "rust_addr2line_wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"] # Critical for Wasm libraries
+
+[dependencies]
+addr2line = "0.21" # Or latest version
+gimli = { version = "0.28", features = ["read"] } # addr2line depends on gimli & object
+object = { version = "0.32", features = ["read_core", "elf", "macho", "archive"] } # Specify features needed
+wasm-bindgen = "0.2"
+
+# Optional: For easier error handling and console logging
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["console"] }
+console_error_panic_hook = "0.1" # For better panic messages in JS console
+
+# Optional: For returning structured data easily (requires 'serde' feature in wasm-bindgen)
+# serde = { version = "1.0", features = ["derive"] }
+# serde-wasm-bindgen = "0.6"

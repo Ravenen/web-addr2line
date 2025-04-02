@@ -1,0 +1,18 @@
+# Rust build artifacts
+rust_addr2line_wasm/target/
+target/
+
+# Wasm output directory (built on demand inside www)
+www/pkg/
+
+# Node.js dependencies
+node_modules/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE files (optional)
+.vscode/
+*.swp
+*~

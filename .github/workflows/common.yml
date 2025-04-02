@@ -1,0 +1,31 @@
+name: Common Build Steps
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain 🦀
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rust-src
+
+      - name: Install wasm-pack 📦
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build Wasm and Site 🛠️
+        run: npm run build
+        env:
+          CARGO_TERM_COLOR: always
+
+      - name: Upload artifact 📦
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./www

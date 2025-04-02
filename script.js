@@ -1,3 +1,5 @@
+import init, { Addr2LineProcessor } from './lib/rust_addr2line_wasm.js';
+
 class ElfFile {
     constructor(name, path, contentBlob, tags = []) {
         this.id = crypto.randomUUID(); // Add unique ID for DB operations
@@ -10,24 +12,21 @@ class ElfFile {
 
 class Addr2LineConverter {
     constructor() {
-        this.initDB().then(() => {
-            this.loadElfFiles().then(files => {
+        // Wait for both DB and Wasm to initialize before setup
+        Promise.all([this.initDB(), init()])
+            .then(([_, wasmModule]) => {
+                this.Addr2LineProcessor = Addr2LineProcessor;
+                return this.loadElfFiles();
+            })
+            .then(files => {
                 this.elfFiles = files;
                 this.activeFileIndex = files.length > 0 ? 0 : null;
                 this.setupEventListeners();
                 this.renderElfFilesList();
+            })
+            .catch(err => {
+                console.error("Initialization error:", err);
             });
-        });
-        this.apiUrl = 'http://localhost:8000'; // Change in production
-
-        window.addEventListener('beforeunload', () => {
-            // Clean up any blob URLs
-            this.elfFiles.forEach(file => {
-                if (file.contentBlob instanceof Blob) {
-                    URL.revokeObjectURL(URL.createObjectURL(file.contentBlob));
-                }
-            });
-        });
     }
 
     async initDB() {
@@ -273,30 +272,42 @@ class Addr2LineConverter {
         }
 
         try {
-            const formData = new FormData();
-            formData.append('log_text', inputText);
-
-            // Get the active file's content
             const activeFile = this.elfFiles[this.activeFileIndex];
-            formData.append('elf_file', activeFile.contentBlob, activeFile.name);
+            const fileArrayBuffer = await activeFile.contentBlob.arrayBuffer();
+            const fileBytes = new Uint8Array(fileArrayBuffer);
+            
+            // Use the stored Addr2LineProcessor class
+            const processor = new this.Addr2LineProcessor(fileBytes);
 
-            const apiResponse = await fetch(`${this.apiUrl}/resolve_log`, {
-                method: 'POST',
-                body: formData,
-                mode: 'cors',
-                credentials: 'include',
-                headers: {
-                    'Accept': 'application/json',
+            // Split input text into lines and process each line
+            const lines = inputText.split('\n');
+            const resolvedLines = [];
+
+            for (const line of lines) {
+                let resolvedLine = line;
+                // Find all hexadecimal addresses in the line
+                const matches = line.match(/0x[0-9a-fA-F]+\b/g);
+                
+                if (matches) {
+                    for (const match of matches) {
+                        try {
+                            const address = BigInt(match);
+                            const frames = processor.lookupFrames(address);
+                            if (frames && frames.length > 0) {
+                                const location = frames.join('\n    ');
+                                resolvedLine = resolvedLine.replace(match, `${match} (${location})`);
+                            }
+                        } catch (e) {
+                            console.warn(`Failed to process address ${match}:`, e);
+                        }
+                    }
                 }
-            });
-
-            if (!apiResponse.ok) {
-                const errorData = await apiResponse.json();
-                throw new Error(errorData.detail || 'API request failed');
+                resolvedLines.push(resolvedLine);
             }
 
-            const result = await apiResponse.json();
-            outputText.textContent = result.resolved_log;
+            outputText.textContent = resolvedLines.join('\n');
+            processor.free(); // Clean up wasm resources
+
         } catch (error) {
             console.error('Conversion error:', error);
             outputText.textContent = 'Error during conversion: ' + error.message;
@@ -369,5 +380,7 @@ class Addr2LineConverter {
     }
 }
 
-// Initialize the converter
-const converter = new Addr2LineConverter();
+// Initialize the converter after document is ready
+document.addEventListener('DOMContentLoaded', () => {
+    window.converter = new Addr2LineConverter();
+});

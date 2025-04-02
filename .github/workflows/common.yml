@@ -2,10 +2,6 @@ name: Common Build Steps
 
 on:
   workflow_call:
-    outputs:
-      build-path:
-        description: "Path to the built website files"
-        value: ${{ jobs.build.outputs.build-path }}
 
 jobs:
   build:
@@ -27,9 +23,7 @@ jobs:
 
       - name: Build Wasm and Site
         id: build
-        run: |
-          npm run build
-          echo "build-path=www/" >> "$GITHUB_OUTPUT"
+        run: npm run build
         env:
           CARGO_TERM_COLOR: always
 
@@ -37,6 +31,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-artifact
-          path: ${{ steps.build.outputs.build-path }}
+          path: ./www
           retention-days: 1
 

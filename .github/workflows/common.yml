@@ -24,7 +24,7 @@ jobs:
         env:
           CARGO_TERM_COLOR: always
 
-      - name: Upload artifact 📦
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./www

@@ -56,7 +56,21 @@
                         </div>
                     </div>
                     <textarea id="inputText" placeholder="1. Type or paste text directly&#10;2. Drag and drop a text file here&#10;3. Click the upload button above"></textarea>
+                    <div class="cleanup-row">
+                        <div class="cleanup-input-wrapper">
+                            <input type="text" id="regexInput" placeholder="Enter regular expression for cleanup">
+                            <button class="action-btn" id="applyToInputBtn" title="Apply to input">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                        </div>
+                        <p class="cleanup-info">
+                            Cleanup expression is automatically applied to the output text. Press the button above to apply it to the input text.
+                            <br><br>
+                            Uses JavaScript's RegExp engine. Remember to escape special characters correctly (e.g., use `\` for a literal `\` in the regex string).
+                        </p>
+                    </div>
                 </div>
+                
                 <div class="output-panel">
                     <div class="panel-header">
                         <h2>Converted Output</h2>

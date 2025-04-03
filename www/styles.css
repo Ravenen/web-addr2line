@@ -156,7 +156,7 @@ main {
 
 textarea {
     width: calc(100% - 20px);
-    min-height: 400px;
+    min-height: 300px; /* Reduced to accommodate cleanup row */
     border: 2px solid #eee;
     border-radius: 4px;
     padding: 10px;
@@ -188,6 +188,45 @@ textarea:focus {
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
+.cleanup-row {
+    margin-top: 24px;
+}
+
+.cleanup-input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#regexInput {
+    flex: 1;
+    padding: 8px 12px;
+    font-family: monospace;
+    font-size: 14px;
+    border: 2px solid #eee;
+    border-radius: 4px;
+    transition: var(--transition);
+    outline: none;
+}
+
+#regexInput::placeholder {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--subtle-color);
+}
+
+#regexInput:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.cleanup-info {
+    margin: 16px 0 0;
+    padding: 5px;
+    font-size: 0.85em;
+    color: var(--subtle-color);
+    line-height: 1.4;
+}
+
 .output-area {
     width: calc(100% - 20px);
     background-color: #f8f9fa;
@@ -197,6 +236,7 @@ textarea:focus {
     padding: 10px;
     font-family: monospace;
     font-size: 14px;
+    white-space: pre-wrap;
 }
 
 .elf-files-list {

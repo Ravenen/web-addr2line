@@ -22,6 +22,8 @@ class Addr2LineConverter {
                 this.elfFiles = files;
                 this.activeFileIndex = files.length > 0 ? 0 : null;
                 this.setupEventListeners();
+                this.setupCleanupListeners();
+                this.restoreCleanupRegex();
                 this.renderElfFilesList();
             })
             .catch(err => {
@@ -134,6 +136,36 @@ class Addr2LineConverter {
         this.initializeDragAndDrop();
     }
 
+    setupCleanupListeners() {
+        const regexInput = document.getElementById('regexInput');
+        const applyToInputBtn = document.getElementById('applyToInputBtn');
+        
+        regexInput.addEventListener('input', () => {
+            localStorage.setItem('cleanupRegex', regexInput.value);
+            // Reapply full conversion to get fresh output with new regex
+            this.convertText();
+        });
+
+        applyToInputBtn.addEventListener('click', () => {
+            const inputText = document.getElementById('inputText');
+            if (inputText.value) {
+                const cleaned = this.cleanupText(inputText.value);
+                if (cleaned !== null) {
+                    inputText.value = cleaned;
+                    this.convertText();
+                }
+            }
+        });
+    }
+
+    restoreCleanupRegex() {
+        const savedRegex = localStorage.getItem('cleanupRegex');
+        if (savedRegex) {
+            const regexInput = document.getElementById('regexInput');
+            regexInput.value = savedRegex;
+        }
+    }
+
     async handleTextFileDrop(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -159,6 +191,8 @@ class Addr2LineConverter {
     clearInput() {
         document.getElementById('inputText').value = '';
         document.getElementById('outputText').textContent = '';
+        document.getElementById('regexInput').value = '';
+        localStorage.removeItem('cleanupRegex');
     }
 
     async copyOutput() {
@@ -296,13 +330,82 @@ class Addr2LineConverter {
                 resolvedLines.push(resolvedLine);
             }
 
-            outputText.textContent = resolvedLines.join('\n');
+            const cleanedOutput = this.applyCleanup(resolvedLines.join('\n'));
+            outputText.textContent = cleanedOutput;
             processor.free();
 
         } catch (error) {
             console.error('Conversion error:', error);
             outputText.textContent = 'Error during conversion: ' + error.message;
         }
+    }
+
+    cleanupText(text) {
+        const regexInput = document.getElementById('regexInput');
+        const regexString = regexInput.value.trim();
+        
+        if (!regexString) return text;
+
+        try {
+            const result = this.cleanupIterativelyWithAllCaptures(text, regexString);
+            if (result.success) {
+                return result.result;
+            } else {
+                console.error(result.error);
+                return null;
+            }
+        } catch (error) {
+            console.error("Cleanup error:", error);
+            return null;
+        }
+    }
+
+    cleanupIterativelyWithAllCaptures(text, regexString, regexFlags = 'gm') {
+        if (!regexFlags.includes('g')) {
+            regexFlags += 'g';
+        }
+
+        let currentText = text;
+        let previousText = null;
+        let iterations = 0;
+        const maxIterations = 1000;
+
+        try {
+            const regex = new RegExp(regexString, regexFlags);
+
+            const replacer = (match, ...captureGroups) => {
+                let replacementString = '';
+                for (let i = 0; i < captureGroups.length - 2; i++) {
+                    if (captureGroups[i] !== undefined) {
+                        replacementString += captureGroups[i];
+                    }
+                }
+                return replacementString;
+            };
+
+            while (currentText !== previousText) {
+                if (iterations++ >= maxIterations) {
+                    throw new Error(`Processing stopped after ${maxIterations} iterations. Check regex for potential infinite loop.`);
+                }
+                previousText = currentText;
+                currentText = currentText.replace(regex, replacer);
+            }
+            return { success: true, result: currentText };
+
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    applyCleanup(text, toOutput = true) {
+        const cleanedText = this.cleanupText(text);
+        if (cleanedText !== null) {
+            if (toOutput) {
+                document.getElementById('outputText').textContent = cleanedText;
+            }
+            return cleanedText;
+        }
+        return text;
     }
 
     addEmptyTag(index) {

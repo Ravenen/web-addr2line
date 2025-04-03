@@ -30,9 +30,33 @@ header {
 
 header h1 {
     color: var(--primary-color);
-    font-size: 2.2em;
+    font-size: 1.9em;
     font-weight: 600;
     margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+header h1 .title-group {
+    display: flex;
+    flex-direction: column;
+}
+
+header h1 .title {
+    line-height: 1;
+}
+
+header h1 .subtitle {
+    font-size: 0.6em;
+    font-weight: normal;
+    color: var(--secondary-color);
+    margin-top: 10px;
+}
+
+header h1 img {
+    height: 2.5em;
+    width: auto;
+    margin-right: 15px;
 }
 
 .upload-btn {

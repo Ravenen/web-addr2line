@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    uses: ./.github/workflows/common.yml
+    uses: ./.github/workflows/build.yml
 
   deploy:
     environment:

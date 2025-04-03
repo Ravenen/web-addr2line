@@ -1,6 +1,6 @@
 {
-    "name": "web-addr2line",
-    "version": "1.0.0",
+    "name": "addrlens",
+    "version": "1.1.0",
     "description": "Web tool to convert addresses to file names and line numbers using addr2line",
     "private": true,
     "scripts": {

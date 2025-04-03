@@ -23,6 +23,7 @@ class Addr2LineConverter {
                 this.activeFileIndex = files.length > 0 ? 0 : null;
                 this.setupEventListeners();
                 this.setupCleanupListeners();
+                this.restoreCleanupRegex();
                 this.renderElfFilesList();
             })
             .catch(err => {
@@ -140,10 +141,9 @@ class Addr2LineConverter {
         const applyToInputBtn = document.getElementById('applyToInputBtn');
         
         regexInput.addEventListener('input', () => {
-            const outputText = document.getElementById('outputText');
-            if (outputText.textContent) {
-                this.applyCleanup(outputText.textContent, true);
-            }
+            localStorage.setItem('cleanupRegex', regexInput.value);
+            // Reapply full conversion to get fresh output with new regex
+            this.convertText();
         });
 
         applyToInputBtn.addEventListener('click', () => {
@@ -156,6 +156,14 @@ class Addr2LineConverter {
                 }
             }
         });
+    }
+
+    restoreCleanupRegex() {
+        const savedRegex = localStorage.getItem('cleanupRegex');
+        if (savedRegex) {
+            const regexInput = document.getElementById('regexInput');
+            regexInput.value = savedRegex;
+        }
     }
 
     async handleTextFileDrop(e) {
@@ -183,6 +191,8 @@ class Addr2LineConverter {
     clearInput() {
         document.getElementById('inputText').value = '';
         document.getElementById('outputText').textContent = '';
+        document.getElementById('regexInput').value = '';
+        localStorage.removeItem('cleanupRegex');
     }
 
     async copyOutput() {

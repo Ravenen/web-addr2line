@@ -33,7 +33,7 @@ class Addr2LineConverter {
 
     async initDB() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('addr2lineDB', 2); // Increment version for schema update
+            const request = indexedDB.open('addr2lineDB', 3); // Increment version for new schema
 
             request.onerror = () => reject(request.error);
 
@@ -42,6 +42,10 @@ class Addr2LineConverter {
                 if (!db.objectStoreNames.contains('elfFiles')) {
                     const store = db.createObjectStore('elfFiles', { keyPath: 'id' });
                     store.createIndex('name', 'name');
+                }
+                // Add new object store for file order
+                if (!db.objectStoreNames.contains('fileOrder')) {
+                    db.createObjectStore('fileOrder', { keyPath: 'id' });
                 }
             };
 
@@ -53,13 +57,38 @@ class Addr2LineConverter {
     }
 
     async loadElfFiles() {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['elfFiles'], 'readonly');
-            const store = transaction.objectStore('elfFiles');
-            const request = store.getAll();
+        return new Promise(async (resolve, reject) => {
+            try {
+                const transaction = this.db.transaction(['elfFiles', 'fileOrder'], 'readonly');
+                const store = transaction.objectStore('elfFiles');
+                const orderStore = transaction.objectStore('fileOrder');
+                
+                const files = await new Promise((res, rej) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => res(request.result || []);
+                    request.onerror = () => rej(request.error);
+                });
 
-            request.onsuccess = () => resolve(request.result || []);
-            request.onerror = () => reject(request.error);
+                const orderRequest = orderStore.get('fileOrder');
+                const order = await new Promise((res) => {
+                    orderRequest.onsuccess = () => res(orderRequest.result?.order || []);
+                });
+
+                // Sort files according to saved order
+                if (order.length > 0) {
+                    files.sort((a, b) => {
+                        const indexA = order.indexOf(a.id);
+                        const indexB = order.indexOf(b.id);
+                        if (indexA === -1) return 1;
+                        if (indexB === -1) return -1;
+                        return indexA - indexB;
+                    });
+                }
+
+                resolve(files);
+            } catch (error) {
+                reject(error);
+            }
         });
     }
 
@@ -80,6 +109,13 @@ class Addr2LineConverter {
         const transaction = this.db.transaction(['elfFiles'], 'readwrite');
         const store = transaction.objectStore('elfFiles');
         await store.delete(id);
+    }
+
+    async saveFileOrder() {
+        const transaction = this.db.transaction(['fileOrder'], 'readwrite');
+        const store = transaction.objectStore('fileOrder');
+        const order = this.elfFiles.map(file => file.id);
+        await store.put({ id: 'fileOrder', order });
     }
 
     setupEventListeners() {
@@ -219,6 +255,9 @@ class Addr2LineConverter {
             this.activeFileIndex = this.elfFiles.length - 1;
             this.renderElfFilesList();
 
+            // Save the new order
+            await this.saveFileOrder();
+
             // Convert if input exists
             const inputText = document.getElementById('inputText').value;
             if (inputText.trim()) {
@@ -238,7 +277,9 @@ class Addr2LineConverter {
 
                 const [movedItem] = this.elfFiles.splice(oldIndex, 1);
                 this.elfFiles.splice(newIndex, 0, movedItem);
-                await this.updateElfFile(movedItem);
+                
+                // Save the new order
+                await this.saveFileOrder();
             }
         });
     }
@@ -470,6 +511,8 @@ class Addr2LineConverter {
             this.activeFileIndex--;
         }
         
+        // Update stored order after removal
+        await this.saveFileOrder();
         this.renderElfFilesList();
     }
 }

@@ -504,37 +504,137 @@ class Addr2LineConverter {
     }
 
     addEmptyTag(index) {
-        const tagsContainer = document.querySelector(`[data-index="${index}"] .elf-file-tags`);
+        const fileCard = document.querySelector(`[data-index="${index}"]`);
+        const tagsContainer = fileCard.querySelector('.elf-file-tags');
+        
+        // Add elevation class to the file card
+        fileCard.classList.add('tag-editing');
+        
         const newTag = document.createElement('span');
         newTag.className = 'tag editing';
+        
+        // Create dropdown container
+        const dropdown = document.createElement('div');
+        dropdown.className = 'tag-suggestions';
+        
         newTag.innerHTML = `
-            <input type="text" placeholder="Enter tag" autofocus>
+            <input type="text" placeholder="Enter tag" autocomplete="off">
             <i class="fas fa-times"></i>
         `;
-
+        
         tagsContainer.appendChild(newTag);
+        newTag.appendChild(dropdown);
 
         const input = newTag.querySelector('input');
+        
+        // Get current file's tags
+        const existingTags = new Set(this.elfFiles[index].tags);
+        
+        // Get all unique tags except ones already used in this file
+        const allTags = new Set();
+        this.elfFiles.forEach(file => {
+            file.tags.forEach(tag => {
+                if (!existingTags.has(tag)) {
+                    allTags.add(tag);
+                }
+            });
+        });
+
+        // Show available tags immediately
+        const sortedTags = Array.from(allTags).sort();
+        if (sortedTags.length > 0) {
+            dropdown.innerHTML = sortedTags
+                .map(tag => `<div class="tag-suggestion" tabindex="0" data-tag="${tag}">${tag}</div>`)
+                .join('');
+            dropdown.style.display = 'block';
+        }
+
+        // Focus after setting up the dropdown
         input.focus();
+
+        // Handle input changes for filtering suggestions
+        input.addEventListener('input', () => {
+            const value = input.value.trim().toLowerCase();
+            const matchingTags = sortedTags.filter(tag => tag.toLowerCase().includes(value));
+
+            dropdown.innerHTML = value ? 
+                (matchingTags.length > 0 ? 
+                    matchingTags.map(tag => `
+                        <div class="tag-suggestion" tabindex="0" data-tag="${tag}">${tag}</div>
+                    `).join('') :
+                    !existingTags.has(value) ? 
+                        `<div class="tag-suggestion new-tag" tabindex="0">Create tag "${value}"</div>` :
+                        `<div class="tag-suggestion new-tag" tabindex="0">Tag "${value}" already exists</div>`
+                ) : sortedTags.map(tag => `
+                    <div class="tag-suggestion" tabindex="0" data-tag="${tag}">${tag}</div>
+                `).join('');
+            
+            dropdown.style.display = 'block';
+        });
+
+        // Modify cleanup handlers to remove elevation class
+        const cleanup = () => {
+            fileCard.classList.remove('tag-editing');
+            newTag.remove();
+        };
+
+        dropdown.addEventListener('click', async (e) => {
+            const suggestion = e.target.closest('.tag-suggestion');
+            if (suggestion) {
+                const tag = suggestion.dataset.tag || input.value.trim();
+                if (tag && !this.elfFiles[index].tags.includes(tag)) {
+                    await this.addTag(index, tag);
+                }
+                cleanup();
+            }
+        });
 
         input.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter') {
                 const tag = input.value.trim();
                 if (tag && !this.elfFiles[index].tags.includes(tag)) {
                     await this.addTag(index, tag);
-                } else {
-                    newTag.remove();
                 }
+                cleanup();
             } else if (e.key === 'Escape') {
-                newTag.remove();
+                cleanup();
+            } else if (e.key === 'ArrowDown' && dropdown.children.length > 0) {
+                e.preventDefault();
+                dropdown.firstElementChild.focus();
             }
         });
 
-        input.addEventListener('blur', () => {
-            setTimeout(() => newTag.remove(), 200);
+        dropdown.addEventListener('keydown', async (e) => {
+            const current = document.activeElement;
+            const isTagSuggestion = current.classList.contains('tag-suggestion');
+            
+            if (e.key === 'ArrowDown' && isTagSuggestion && current.nextElementSibling) {
+                e.preventDefault();
+                current.nextElementSibling.focus();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (isTagSuggestion && current.previousElementSibling) {
+                    current.previousElementSibling.focus();
+                } else {
+                    input.focus();
+                }
+            } else if (e.key === 'Enter' && isTagSuggestion) {
+                e.preventDefault();
+                const tag = current.dataset.tag || input.value.trim();
+                if (tag && !this.elfFiles[index].tags.includes(tag)) {
+                    await this.addTag(index, tag);
+                }
+                cleanup();
+            }
         });
 
-        newTag.querySelector('i').addEventListener('click', () => newTag.remove());
+        input.addEventListener('blur', (e) => {
+            if (!e.relatedTarget?.closest('.tag-suggestions')) {
+                setTimeout(cleanup, 200);
+            }
+        });
+
+        newTag.querySelector('i').addEventListener('click', cleanup);
     }
 
     async removeTag(index, tag) {

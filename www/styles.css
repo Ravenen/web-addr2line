@@ -303,6 +303,12 @@ textarea:focus {
     border: 1px solid #eee;
     transition: var(--transition);
     cursor: pointer;
+    position: relative;
+    z-index: 1;
+}
+
+.elf-file-item.tag-editing {
+    z-index: 100;
 }
 
 .drag-handle {
@@ -409,6 +415,7 @@ textarea:focus {
     background: white;
     border: 1px solid var(--secondary-color);
     margin: 0;
+    position: relative;
 }
 
 .tag input {
@@ -467,6 +474,38 @@ textarea:focus {
 .tag-input:focus {
     border-color: var(--accent-color);
     width: 120px;
+}
+
+.tag-suggestions {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -1px;
+    right: -1px;
+    background: white;
+    border: 1px solid var(--secondary-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.tag-suggestion {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: var(--transition);
+    outline: none;
+}
+
+.tag-suggestion:hover,
+.tag-suggestion:focus-visible {
+    background: rgb(from var(--secondary-color) r g b / 0.1);
+}
+
+.tag-suggestion.new-tag {
+    color: var(--accent-color);
+    font-style: italic;
 }
 
 .file-actions {

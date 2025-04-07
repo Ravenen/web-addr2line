@@ -304,6 +304,13 @@ class Addr2LineConverter {
             file.tags.forEach(tag => uniqueTags.add(tag));
         });
 
+        // Remove selected tags that no longer exist in any file
+        this.selectedTags.forEach(tag => {
+            if (!uniqueTags.has(tag)) {
+                this.selectedTags.delete(tag);
+            }
+        });
+
         // Sort tags alphabetically
         const sortedTags = Array.from(uniqueTags).sort();
         

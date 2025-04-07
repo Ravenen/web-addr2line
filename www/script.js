@@ -229,8 +229,6 @@ class Addr2LineConverter {
     clearInput() {
         document.getElementById('inputText').value = '';
         document.getElementById('outputText').textContent = '';
-        document.getElementById('regexInput').value = '';
-        localStorage.removeItem('cleanupRegex');
     }
 
     async copyOutput() {

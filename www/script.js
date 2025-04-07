@@ -527,13 +527,20 @@ class Addr2LineConverter {
 
         const input = newTag.querySelector('input');
         
-        // Get all existing unique tags
+        // Get current file's tags
+        const existingTags = new Set(this.elfFiles[index].tags);
+        
+        // Get all unique tags except ones already used in this file
         const allTags = new Set();
         this.elfFiles.forEach(file => {
-            file.tags.forEach(tag => allTags.add(tag));
+            file.tags.forEach(tag => {
+                if (!existingTags.has(tag)) {
+                    allTags.add(tag);
+                }
+            });
         });
 
-        // Show all tags immediately
+        // Show available tags immediately
         const sortedTags = Array.from(allTags).sort();
         if (sortedTags.length > 0) {
             dropdown.innerHTML = sortedTags
@@ -555,7 +562,9 @@ class Addr2LineConverter {
                     matchingTags.map(tag => `
                         <div class="tag-suggestion" tabindex="0" data-tag="${tag}">${tag}</div>
                     `).join('') :
-                    `<div class="tag-suggestion new-tag" tabindex="0">Create tag "${value}"</div>`
+                    !existingTags.has(value) ? 
+                        `<div class="tag-suggestion new-tag" tabindex="0">Create tag "${value}"</div>` :
+                        `<div class="tag-suggestion new-tag" tabindex="0">Tag "${value}" already exists</div>`
                 ) : sortedTags.map(tag => `
                     <div class="tag-suggestion" tabindex="0" data-tag="${tag}">${tag}</div>
                 `).join('');

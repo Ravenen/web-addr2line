@@ -299,13 +299,20 @@ class Addr2LineConverter {
         // Sort tags alphabetically
         const sortedTags = Array.from(uniqueTags).sort();
         
-        // Render tags
-        tagsList.innerHTML = sortedTags.map(tag => `
-            <span class="tag ${this.selectedTags.has(tag) ? 'selected' : ''}" 
-                  onclick="converter.toggleTag('${tag}')">
-                ${tag}
-            </span>
-        `).join('');
+        // Render tags or empty state
+        if (sortedTags.length === 0) {
+            tagsList.innerHTML = `
+                <div class="tags-list-empty">
+                    Add tags to your files using the tag button <i class="fas fa-tag" style="margin: 0 4px"></i> to enable filtering
+                </div>`;
+        } else {
+            tagsList.innerHTML = sortedTags.map(tag => `
+                <span class="tag ${this.selectedTags.has(tag) ? 'selected' : ''}" 
+                      onclick="converter.toggleTag('${tag}')">
+                    ${tag}
+                </span>
+            `).join('');
+        }
     }
 
     toggleTag(tag) {

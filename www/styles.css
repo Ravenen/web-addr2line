@@ -499,6 +499,13 @@ textarea:focus {
     margin-bottom: 16px;
 }
 
+.tags-list-empty {
+    font-size: 0.85em;
+    color: var(--subtle-color);
+    line-height: 1.4;
+    margin: 8px 0;
+}
+
 .tags-list .tag {
     cursor: pointer;
     opacity: 0.7;

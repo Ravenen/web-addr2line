@@ -21,10 +21,12 @@ class Addr2LineConverter {
             .then(files => {
                 this.elfFiles = files;
                 this.activeFileIndex = files.length > 0 ? 0 : null;
+                this.selectedTags = new Set();
                 this.setupEventListeners();
                 this.setupCleanupListeners();
                 this.restoreCleanupRegex();
                 this.renderElfFilesList();
+                this.updateTagsList();
             })
             .catch(err => {
                 console.error("Initialization error:", err);
@@ -254,6 +256,7 @@ class Addr2LineConverter {
             this.elfFiles.push(elfFile);
             this.activeFileIndex = this.elfFiles.length - 1;
             this.renderElfFilesList();
+            this.updateTagsList();
 
             // Save the new order
             await this.saveFileOrder();
@@ -284,41 +287,84 @@ class Addr2LineConverter {
         });
     }
 
+    updateTagsList() {
+        const tagsList = document.getElementById('tagsList');
+        const uniqueTags = new Set();
+        
+        // Collect all unique tags
+        this.elfFiles.forEach(file => {
+            file.tags.forEach(tag => uniqueTags.add(tag));
+        });
+
+        // Sort tags alphabetically
+        const sortedTags = Array.from(uniqueTags).sort();
+        
+        // Render tags or empty state
+        if (sortedTags.length === 0) {
+            tagsList.innerHTML = `
+                <div class="tags-list-empty">
+                    Add tags to your files using the tag button <i class="fas fa-tag" style="margin: 0 4px"></i> to enable filtering
+                </div>`;
+        } else {
+            tagsList.innerHTML = sortedTags.map(tag => `
+                <span class="tag ${this.selectedTags.has(tag) ? 'selected' : ''}" 
+                      onclick="converter.toggleTag('${tag}')">
+                    ${tag}
+                </span>
+            `).join('');
+        }
+    }
+
+    toggleTag(tag) {
+        if (this.selectedTags.has(tag)) {
+            this.selectedTags.delete(tag);
+        } else {
+            this.selectedTags.add(tag);
+        }
+        this.updateTagsList();
+        this.renderElfFilesList();
+    }
+
     renderElfFilesList() {
         const elfFilesList = document.getElementById('elfFilesList');
-        elfFilesList.innerHTML = this.elfFiles.map((file, index) => `
-            <li class="elf-file-item ${index === this.activeFileIndex ? 'active' : ''}" 
-                data-index="${index}" >
-                <i class="fas fa-grip-vertical drag-handle"></i>
-                <div class="file-content" onclick="event.stopPropagation();converter.setActiveFile(${index})">
-                    <span class="elf-file-name" contenteditable="true" 
-                        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
-                        onclick="event.stopPropagation()"
-                        onblur="converter.updateFileName(${index}, this.textContent)">
-                        ${file.displayName || file.name}
-                    </span>
-                    <div class="elf-file-path" title="${file.fullPath}">
-                        ${file.fullPath}
+        elfFilesList.innerHTML = this.elfFiles.map((file, index) => {
+            const shouldShow = this.selectedTags.size === 0 || 
+                             Array.from(this.selectedTags).every(tag => file.tags.includes(tag));
+            
+            return `
+                <li class="elf-file-item ${index === this.activeFileIndex ? 'active' : ''} ${shouldShow ? '' : 'hidden'}" 
+                    data-index="${index}">
+                    <i class="fas fa-grip-vertical drag-handle"></i>
+                    <div class="file-content" onclick="event.stopPropagation();converter.setActiveFile(${index})">
+                        <span class="elf-file-name" contenteditable="true" 
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+                            onclick="event.stopPropagation()"
+                            onblur="converter.updateFileName(${index}, this.textContent)">
+                            ${file.displayName || file.name}
+                        </span>
+                        <div class="elf-file-path" title="${file.fullPath}">
+                            ${file.fullPath}
+                        </div>
+                        <div class="elf-file-tags">
+                            ${file.tags.map(tag => `
+                                <span class="tag">
+                                    ${tag}
+                                    <i class="fas fa-times" onclick="event.stopPropagation();converter.removeTag(${index}, '${tag}')"></i>
+                                </span>
+                            `).join('')}
+                        </div>
                     </div>
-                    <div class="elf-file-tags">
-                        ${file.tags.map(tag => `
-                            <span class="tag">
-                                ${tag}
-                                <i class="fas fa-times" onclick="event.stopPropagation();converter.removeTag(${index}, '${tag}')"></i>
-                            </span>
-                        `).join('')}
+                    <div class="file-actions" onclick="event.stopPropagation()">
+                        <button onclick="event.stopPropagation();converter.addEmptyTag(${index})">
+                            <i class="fas fa-tag"></i>
+                        </button>
+                        <button onclick="event.stopPropagation();converter.removeFile(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
-                </div>
-                <div class="file-actions" onclick="event.stopPropagation()">
-                    <button onclick="event.stopPropagation();converter.addEmptyTag(${index})">
-                        <i class="fas fa-tag"></i>
-                    </button>
-                    <button onclick="event.stopPropagation();converter.removeFile(${index})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </li>
-        `).join('');
+                </li>
+            `;
+        }).join('');
     }
 
     setActiveFile(index) {
@@ -486,12 +532,14 @@ class Addr2LineConverter {
     async removeTag(index, tag) {
         this.elfFiles[index].tags = this.elfFiles[index].tags.filter(t => t !== tag);
         await this.updateElfFile(this.elfFiles[index]);
+        this.updateTagsList();
         this.renderElfFilesList();
     }
 
     async addTag(index, tag) {
         this.elfFiles[index].tags.push(tag);
         await this.updateElfFile(this.elfFiles[index]);
+        this.updateTagsList();
         this.renderElfFilesList();
     }
 
@@ -513,6 +561,7 @@ class Addr2LineConverter {
         
         // Update stored order after removal
         await this.saveFileOrder();
+        this.updateTagsList();
         this.renderElfFilesList();
     }
 }

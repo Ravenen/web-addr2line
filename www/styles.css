@@ -148,6 +148,38 @@ main {
     cursor: pointer;
     border-radius: 4px;
     transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.action-btn i {
+    transition: opacity 0.2s;
+}
+
+.action-btn.copy-success i {
+    opacity: 0;
+}
+
+.action-btn.copy-success::before {
+    content: '\f00c'; /* Font Awesome checkmark */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--accent-color);
+    opacity: 0;
+    animation: copySuccess 1s ease-in-out;
+}
+
+@keyframes copySuccess {
+     0%, 100% {
+        opacity: 0;
+    }
+    20%, 80% {
+        opacity: 1;
+    }
 }
 
 .action-btn:hover {

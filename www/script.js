@@ -237,6 +237,13 @@ class Addr2LineConverter {
         const output = document.getElementById('outputText').textContent;
         try {
             await navigator.clipboard.writeText(output);
+            // Add animation class
+            const copyBtn = document.querySelector('.output-panel .action-btn');
+            copyBtn.classList.add('copy-success');
+            // Remove class after animation completes
+            setTimeout(() => {
+                copyBtn.classList.remove('copy-success');
+            }, 1000);
         } catch (err) {
             console.error('Failed to copy text:', err);
         }

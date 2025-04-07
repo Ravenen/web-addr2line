@@ -243,29 +243,32 @@ class Addr2LineConverter {
     }
 
     async handleElfFileUpload(e) {
-        const file = e.target.files[0];
-        if (file) {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        for (const file of files) {
             const elfFile = new ElfFile(
                 file.name,
                 file.webkitRelativePath || file.path || file.name,
-                file // Store the File object directly
+                file
             );
             elfFile.displayName = file.name;
             
             const id = await this.addElfFile(elfFile);
             this.elfFiles.push(elfFile);
-            this.activeFileIndex = this.elfFiles.length - 1;
-            this.renderElfFilesList();
-            this.updateTagsList();
+        }
 
-            // Save the new order
-            await this.saveFileOrder();
+        this.activeFileIndex = this.elfFiles.length - 1;
+        this.renderElfFilesList();
+        this.updateTagsList();
 
-            // Convert if input exists
-            const inputText = document.getElementById('inputText').value;
-            if (inputText.trim()) {
-                await this.convertText();
-            }
+        // Save the new order
+        await this.saveFileOrder();
+
+        // Convert if input exists
+        const inputText = document.getElementById('inputText').value;
+        if (inputText.trim()) {
+            await this.convertText();
         }
     }
 
